@@ -24,7 +24,7 @@ export class PreRenderingEngineService {
                     lastPreRenderingDate : new Date().getTime(),
                     pageUrl: url,
                 }
-                resolve(tabContent);
+                resolve(preRenderedPageData);
             } catch (error) {
                 reject(error);
             }
