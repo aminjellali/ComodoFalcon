@@ -1,22 +1,22 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as compression from 'compression';
 import { LoggerService } from './logger/logger.services/logger.service';
+import swaggerConfigurer from './config/swagger-config';
+import { ConfigService } from './config/config-service/config-service.service';
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const options = new DocumentBuilder()
-    .setTitle('Minotore Pre-Renderer')
-    .setDescription(
-      'An API built on top on puppeteer and nest js to solve pre-render web pages',
-    )
-    .setVersion('1.0')
-    .addTag('SEO')
-    .build();
-  const document = SwaggerModule.createDocument(app, options);
+  // Configure swagger.
+  swaggerConfigurer(app);
+  // Override the default logger.
   app.useLogger(app.get(LoggerService));
-  SwaggerModule.setup('api', app, document);
+  // Enable data compression.
   app.use(compression());
-  await app.listen(3000);
+  // retreive port
+  const serverPort = app.get(ConfigService).get('SERVER_PORT');
+  await app.listen(serverPort);
+  app.get(LoggerService).info(`Listening on port ${serverPort}`);
+  app.get(LoggerService).warn('Configurations retreived from the .conf file are not typed and might require further processsing');
 }
 bootstrap();

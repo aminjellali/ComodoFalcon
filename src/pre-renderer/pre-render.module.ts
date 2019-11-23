@@ -5,11 +5,14 @@ import { RessourceRequestsHandlerService } from './pre-renderer-services/ressour
 import { PreRenderingEngineService } from './pre-renderer-services/pre-rendering-engine/pre-rendering-engine.service';
 import { PageSchema } from './schemas/page.schema';
 import { PersistanceLayerService } from './pre-renderer-services/persistance-layer/persistance-layer.service';
+import { OptimizerService } from './pre-renderer-services/optimizer/optimizer.service';
+import { PreRendererConfigModule } from 'src/config/pre-renderer-config.module';
+import { LoggerModule } from 'src/logger/logger.module'; 
 
 @Module({
-  imports: [MongooseModule.forFeature([{name: 'PreRenderedPages', schema: PageSchema}])],
+  imports: [MongooseModule.forFeature([{name: 'PreRenderedPages', schema: PageSchema}]), PreRendererConfigModule, LoggerModule],
   controllers: [
     PreRenderController],
-  providers: [RessourceRequestsHandlerService, PreRenderingEngineService, PersistanceLayerService],
+  providers: [RessourceRequestsHandlerService, PreRenderingEngineService, PersistanceLayerService, OptimizerService],
 })
 export class PreRenderModule { }
