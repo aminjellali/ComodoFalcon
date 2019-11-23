@@ -1,6 +1,6 @@
 import { Controller, Body, Post, HttpException, HttpStatus, Get } from '@nestjs/common';
 import { PreRenderRequestDTO, ElementToWaitForType } from './pre-render-controller-DTOs/preRenderRequestDTO';
-import { PreRenderingEngineService } from './pre-rendering-engine/pre-rendering-engine.service';
+import { PreRenderingEngineService } from './pre-renderer-services/pre-rendering-engine/pre-rendering-engine.service';
 import { PreRenderedPageModel } from './models/preRenderedPageModel';
 @Controller('pre-render')
 export class PreRenderController {

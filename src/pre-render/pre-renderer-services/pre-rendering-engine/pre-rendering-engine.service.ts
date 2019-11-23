@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { ElementToWaitForType } from '../pre-render-controller-DTOs/preRenderRequestDTO';
+import { ElementToWaitForType } from '../../pre-render-controller-DTOs/preRenderRequestDTO';
 import * as puppetter from 'puppeteer';
-import { PreRenderedPageModel } from '../models/preRenderedPageModel';
+import { PreRenderedPageModel } from '../../models/preRenderedPageModel';
 import { PersistanceLayerService } from '../persistance-layer/persistance-layer.service';
 @Injectable()
 export class PreRenderingEngineService {

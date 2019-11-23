@@ -1,13 +1,18 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Logger } from '@nestjs/common';
 import { AppService } from './app.service';
 import * as fs from 'fs';
+import { LoggerService } from './logger/logger.services/logger.service';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    private readonly appService: AppService,
+    private readonly logger: LoggerService,
+  ) {}
 
   @Get()
   getHello(): string {
-    return fs.readFileSync('index.html', 'utf8');
+    Logger.warn('Iam ooooon !!');
+    return 'Hello World!';
   }
 }
