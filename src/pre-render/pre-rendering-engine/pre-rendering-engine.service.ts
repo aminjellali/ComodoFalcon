@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { ElementToWaitForType } from '../pre-render-controller-DTOs/preRenderRequestDTO';
 import * as puppetter from 'puppeteer';
-import { PreRenderedPageModel } from '../pre-render-documents/preRenderedPageModel';
+import { PreRenderedPageModel } from '../models/preRenderedPageModel';
+import { PersistanceLayerService } from '../persistance-layer/persistance-layer.service';
 @Injectable()
 export class PreRenderingEngineService {
-    async preRenderPage(url: string, elementToWaitFor: string, elementToWaitForType: ElementToWaitForType): Promise<any> {
+    constructor(private readonly pagePersistanceService: PersistanceLayerService) { }
+    async preRenderPage(url: string, elementToWaitFor?: string, elementToWaitForType?: ElementToWaitForType): Promise<PreRenderedPageModel> {
         const browser = await puppetter.launch({ headless: true });
         return new Promise(async (resolve, reject) => {
             try {
@@ -20,14 +22,19 @@ export class PreRenderingEngineService {
                 await tab.close();
                 await browser.close();
                 const preRenderedPageData: PreRenderedPageModel = {
-                    content : tabContent,
-                    lastPreRenderingDate : new Date().getTime(),
+                    content: tabContent,
+                    lastPreRenderingDate: new Date().getTime(),
                     pageUrl: url,
                 }
-                resolve(preRenderedPageData);
+                const persistedPreRenderedPageData = await this.pagePersistanceService.writePage(preRenderedPageData);
+                resolve(persistedPreRenderedPageData);
             } catch (error) {
                 reject(error);
             }
         });
     }
+    async getAllPreRenderedPages(): Promise<PreRenderedPageModel[]> {
+        return await this.pagePersistanceService.getAllPreRenderedPages();
+    }
+
 }
