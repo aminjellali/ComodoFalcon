@@ -26,14 +26,60 @@ export class PreRenderingEngineService {
     this.botUserAgent = configService.get('USER_AGENT_AS_BOT');
     logger.info(`Rendering optimizer enabled ${this.optimizerEnabled}`);
   }
+  /**
+   * - value extracted from the ENABLE_OPTIMIZATION .conf file var.
+   *
+   * @type {boolean}
+   * @memberof PreRenderingEngineService
+   */
   readonly optimizerEnabled: boolean;
+  /**
+   * - value extracted from the IDENTIFY_AS_BOT .conf file var.
+   *
+   * @type {boolean}
+   * @memberof PreRenderingEngineService
+   */
   readonly identifyAsBot: boolean;
+  /**
+   * - value extracted from the LAUNCH_HEADLESS_BROWSER .conf file var.
+   *
+   * @type {boolean}
+   * @memberof PreRenderingEngineService
+   */
   readonly launchHeadlessBrowser: boolean;
+  /**
+   * - value extracted from the USER_AGENT_AS_BOT .conf file var.
+   *
+   * @type {string}
+   * @memberof PreRenderingEngineService
+   */
   readonly botUserAgent: string;
+  /**
+   * - value extracted from the WAIT_FOR_STARTERS .conf file var.
+   *
+   * @type {string[]}
+   * @memberof PreRenderingEngineService
+   */
   readonly waitForStarters: string[];
+  /**
+   * - Get a page by Url
+   *
+   * @param {string} url
+   * @returns {Promise<PreRenderedPageModel>}
+   * @memberof PreRenderingEngineService
+   */
   async getPreRenderedPageByUrl(url: string): Promise<PreRenderedPageModel> {
     return await this.pagePersistanceService.getPageByUrlAndProject(url);
   }
+  /**
+   * - Pre-render a web page by its url than persist it in the database.
+   * - Rejects errors of it's sub functions.
+   *
+   * @param {string} url
+   * @param {string} [elementToWaitFor]
+   * @returns {Promise<PreRenderedPageModel>}
+   * @memberof PreRenderingEngineService
+   */
   async preRenderAndPersistPage(
     url: string,
     elementToWaitFor?: string,
@@ -63,12 +109,33 @@ export class PreRenderingEngineService {
       }
     });
   }
+  /**
+   * - Retreives all pre-rendered pages.
+   *
+   * @returns {Promise<PreRenderedPageModel[]>}
+   * @memberof PreRenderingEngineService
+   */
   async getAllPreRenderedPages(): Promise<PreRenderedPageModel[]> {
     return await this.pagePersistanceService.getAllPreRenderedPages();
   }
+  /**
+   * - Delete a page by it's Url.
+   *
+   * @param {string} url
+   * @returns {Promise<PreRenderedPageModel>}
+   * @memberof PreRenderingEngineService
+   */
   async deletePersistedPageByUrl(url: string): Promise<PreRenderedPageModel> {
     return await this.pagePersistanceService.deletePageByUrl(url);
   }
+  /**
+   * - This function will decide to either update or create pre-renderd page.
+   *
+   * @private
+   * @param {PreRenderedPageModel} page
+   * @returns {Promise<PreRenderedPageModel>}
+   * @memberof PreRenderingEngineService
+   */
   private async handlePagePersistance(
     page: PreRenderedPageModel,
   ): Promise<PreRenderedPageModel> {
@@ -83,10 +150,27 @@ export class PreRenderingEngineService {
     this.logger.info('No previous page found, adding new ...');
     return await this.pagePersistanceService.writePage(page);
   }
-
+  /**
+   * - returns a page if it exists with minimimal data.
+   *
+   * @private
+   * @param {string} url
+   * @returns {Promise<PreRenderedPageModel>}
+   * @memberof PreRenderingEngineService
+   */
   private async pageIfPersisted(url: string): Promise<PreRenderedPageModel> {
     return await this.pagePersistanceService.getPageByUrlAndProject(url);
   }
+  /**
+   * - Responsible for pre-renderinga page.
+   * - Logs the time taken for a page to pre-render.
+   *
+   * @private
+   * @param {*} url
+   * @param {string} waitFor
+   * @returns {Promise<string>}
+   * @memberof PreRenderingEngineService
+   */
   private async preRenderPage(url, waitFor: string): Promise<string> {
     return new Promise(async (resolve, reject) => {
       const browser = await puppetter.launch({
@@ -119,6 +203,15 @@ export class PreRenderingEngineService {
       }
     });
   }
+  /**
+   * - Will validate and resolve if provied the element to wait for.
+   * - Throws error if not valid.
+   *
+   * @private
+   * @param {string} waitFor
+   * @returns {string}
+   * @memberof PreRenderingEngineService
+   */
   private resolveWaitFor(waitFor: string): string {
     for (
       let waitForStarterIndex = 0;
@@ -133,9 +226,19 @@ export class PreRenderingEngineService {
       }
     }
     throw new Error(
-      `Could not resolve element to wait for, type of the element to wait for <${waitFor}> it has to start with one of [${this.waitForStarters}] and must have a length > 1. in case such element does not exist there wiill be a  time out exception.`,
+      `Could not resolve element to wait for, type of the element to wait for <${waitFor}> it has
+       to start with one of [${this.waitForStarters}] and must have a length > 1. in case such element
+       does not exist there wiill be a  time out exception.`,
     );
   }
+  /**
+   * - Returns a string if it is valid
+   *
+   * @private
+   * @param {string} stringValue
+   * @returns {string}
+   * @memberof PreRenderingEngineService
+   */
   private stirngIsValid(stringValue: string): string {
     if (stringValue && stringValue.length !== 0) {
       return stringValue.toString();
