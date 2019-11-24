@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ElementToWaitForType } from '../../pre-renderer-controller-DTOs/preRenderRequestDTO';
 import * as puppetter from 'puppeteer';
 import { PreRenderedPageModel } from '../../models/preRenderedPageModel';
 import { PersistanceLayerService } from '../persistance-layer/persistance-layer.service';
@@ -7,6 +6,7 @@ import { PersistanceLayerService } from '../persistance-layer/persistance-layer.
 import { OptimizerService } from '../optimizer/optimizer.service';
 import { ConfigService } from 'src/config/config-service/config-service.service';
 import { LoggerService } from 'src/logger/logger.services/logger.service';
+
 @Injectable()
 export class PreRenderingEngineService {
   constructor(
@@ -22,6 +22,7 @@ export class PreRenderingEngineService {
     this.launchHeadlessBrowser = JSON.parse(
       configService.get('LAUNCH_HEADLESS_BROWSER'),
     );
+    this.waitForStarters = configService.get('WAIT_FOR_STARTERS').split(',');
     this.botUserAgent = configService.get('USER_AGENT_AS_BOT');
     logger.info(`Rendering optimizer enabled ${this.optimizerEnabled}`);
   }
@@ -29,17 +30,19 @@ export class PreRenderingEngineService {
   readonly identifyAsBot: boolean;
   readonly launchHeadlessBrowser: boolean;
   readonly botUserAgent: string;
-
+  readonly waitForStarters: string[];
+  async getPreRenderedPageByUrl(url: string): Promise<PreRenderedPageModel> {
+    return await this.pagePersistanceService.getPageByUrlAndProject(url);
+  }
   async preRenderAndPersistPage(
     url: string,
     elementToWaitFor?: string,
-    elementToWaitForType?: ElementToWaitForType,
   ): Promise<PreRenderedPageModel> {
     return new Promise(async (resolve, reject) => {
       try {
         let waitFor;
-        if (this.stirngIsValid(elementToWaitFor) && elementToWaitForType) {
-          waitFor = this.resolveWaitFor(elementToWaitFor, elementToWaitForType);
+        if (this.stirngIsValid(elementToWaitFor)) {
+          waitFor = this.resolveWaitFor(elementToWaitFor);
         } else {
           this.logger.warn(
             `The element to wait for or it's time are not defined.`,
@@ -51,7 +54,7 @@ export class PreRenderingEngineService {
           lastPreRenderingDate: new Date().getTime(),
           pageUrl: url,
         };
-        const persistedPreRenderedPageData = await this.pagePersistanceService.writePage(
+        const persistedPreRenderedPageData = await this.handlePagePersistance(
           preRenderedPageData,
         );
         resolve(persistedPreRenderedPageData);
@@ -63,7 +66,27 @@ export class PreRenderingEngineService {
   async getAllPreRenderedPages(): Promise<PreRenderedPageModel[]> {
     return await this.pagePersistanceService.getAllPreRenderedPages();
   }
+  async deletePersistedPageByUrl(url: string): Promise<PreRenderedPageModel> {
+    return await this.pagePersistanceService.deletePageByUrl(url);
+  }
+  private async handlePagePersistance(
+    page: PreRenderedPageModel,
+  ): Promise<PreRenderedPageModel> {
+    const persistedPage = await this.pageIfPersisted(page.pageUrl);
+    if (persistedPage) {
+      this.logger.info('Found previous, updating ...');
+      return await this.pagePersistanceService.updatePage(
+        persistedPage.id,
+        page,
+      );
+    }
+    this.logger.info('No previous page found, adding new ...');
+    return await this.pagePersistanceService.writePage(page);
+  }
 
+  private async pageIfPersisted(url: string): Promise<PreRenderedPageModel> {
+    return await this.pagePersistanceService.getPageByUrlAndProject(url);
+  }
   private async preRenderPage(url, waitFor: string): Promise<string> {
     return new Promise(async (resolve, reject) => {
       const browser = await puppetter.launch({
@@ -71,6 +94,7 @@ export class PreRenderingEngineService {
       });
       // launch a new tab in the browser.
       const browserTab = await browser.newPage();
+      const hrStart = process.hrtime();
       try {
         if (this.identifyAsBot) {
           browserTab.setUserAgent(this.botUserAgent);
@@ -85,6 +109,7 @@ export class PreRenderingEngineService {
         const tabContent = await browserTab.content();
         await browserTab.close();
         await browser.close();
+        this.logger.info(`Took ${process.hrtime(hrStart)} to render ${url}`);
         resolve(tabContent);
       } catch (err) {
         this.logger.error(err, err.trace);
@@ -94,22 +119,28 @@ export class PreRenderingEngineService {
       }
     });
   }
-  private resolveWaitFor(
-    waitFor: string,
-    waitForType: ElementToWaitForType,
-  ): string {
-    switch (waitForType) {
-      case ElementToWaitForType.CSS_CLASS:
-        return `.${waitFor}`;
-      case ElementToWaitForType.ID:
-        return `#${waitFor}`;
-      default:
-        throw new Error(
-          `Could not resolve element to wait for, type of the element to wait for <${waitForType}>, element to wait for: <${waitFor}>`,
-        );
+  private resolveWaitFor(waitFor: string): string {
+    for (
+      let waitForStarterIndex = 0;
+      waitForStarterIndex <= this.waitForStarters.length;
+      waitForStarterIndex++
+    ) {
+      if (
+        waitFor.startsWith(this.waitForStarters[waitForStarterIndex]) &&
+        waitFor.length > 1
+      ) {
+        return waitFor;
+      }
     }
+    throw new Error(
+      `Could not resolve element to wait for, type of the element to wait for <${waitFor}> it has to start with one of [${this.waitForStarters}] and must have a length > 1. in case such element does not exist there wiill be a  time out exception.`,
+    );
   }
-  private stirngIsValid(stringValue: string) {
-    return stringValue && stringValue.length !== 0;
+  private stirngIsValid(stringValue: string): string {
+    if (stringValue && stringValue.length !== 0) {
+      return stringValue.toString();
+    } else {
+      return undefined;
+    }
   }
 }

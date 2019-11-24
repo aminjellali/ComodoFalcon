@@ -19,6 +19,7 @@ import { LoggerModule } from './logger/logger.module';
         uri: configService.get('MONGODB_URI'),
         useNewUrlParser: true,
         useUnifiedTopology: true,
+        useFindAndModify: false,
       }),
       inject: [ConfigService],
     }),
