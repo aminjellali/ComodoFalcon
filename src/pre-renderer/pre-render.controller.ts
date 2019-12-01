@@ -31,9 +31,9 @@ export class PreRenderController {
     try {
       return preRenderedPages.map(preRenderedPage => {
         return {
+          lastPreRenderingDate: new Date(preRenderedPage.lastPreRenderingDate),
           pageUrl: preRenderedPage.pageUrl,
           content: preRenderedPage.content,
-          lastPreRenderingDate: new Date(preRenderedPage.lastPreRenderingDate)
         };
       });
     } catch (error) {
@@ -55,13 +55,13 @@ export class PreRenderController {
     @Body() getPageUrl,
   ): Promise<PreRenderedPageDataDTO> {
     const preRenderedPage = await this.preRenderingEngineService.getPreRenderedPageByUrl(
-      getPageUrl.url,
+      getPageUrl.url, {pageUrl: 1, content: 1, lastPreRenderingDate: 1},
     );
     try {
       return {
         pageUrl: preRenderedPage.pageUrl,
+        lastPreRenderingDate: new Date(preRenderedPage.lastPreRenderingDate),
         content: preRenderedPage.content,
-        lastPreRenderingDate: new Date(preRenderedPage.lastPreRenderingDate)
       };
     } catch (error) {
       throw new HttpException(`No page to be found, this error occured while fetching content ${error}`, HttpStatus.NOT_FOUND);

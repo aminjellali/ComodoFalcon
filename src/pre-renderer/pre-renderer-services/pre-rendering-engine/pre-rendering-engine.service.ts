@@ -6,6 +6,8 @@ import { PersistanceLayerService } from '../persistance-layer/persistance-layer.
 import { OptimizerService } from '../optimizer/optimizer.service';
 import { ConfigService } from 'src/config/config-service/config-service.service';
 import { LoggerService } from 'src/logger/logger.services/logger.service';
+import { PreRenderingOperationType } from 'src/pre-renderer/models/preRenderingReport';
+import { PreRendererResponseObject } from 'src/pre-renderer/models/preRendererResponseObject';
 
 @Injectable()
 export class PreRenderingEngineService {
@@ -68,8 +70,8 @@ export class PreRenderingEngineService {
    * @returns {Promise<PreRenderedPageModel>}
    * @memberof PreRenderingEngineService
    */
-  async getPreRenderedPageByUrl(url: string): Promise<PreRenderedPageModel> {
-    return await this.pagePersistanceService.getPageByUrlAndProject(url);
+  async getPreRenderedPageByUrl(url: string, projection: any): Promise<PreRenderedPageModel> {
+    return await this.pagePersistanceService.getPageByUrlAndProject(url, projection);
   }
   /**
    * - Pre-render a web page by its url than persist it in the database.
@@ -77,13 +79,13 @@ export class PreRenderingEngineService {
    *
    * @param {string} url
    * @param {string} [elementToWaitFor]
-   * @returns {Promise<PreRenderedPageModel>}
+   * @returns {Promise<PreRendererResponseObject>}
    * @memberof PreRenderingEngineService
    */
   async preRenderAndPersistPage(
     url: string,
     elementToWaitFor?: string,
-  ): Promise<PreRenderedPageModel> {
+  ): Promise<PreRendererResponseObject> {
     return new Promise(async (resolve, reject) => {
       try {
         let waitFor;
@@ -91,19 +93,26 @@ export class PreRenderingEngineService {
           waitFor = this.resolveWaitFor(elementToWaitFor);
         } else {
           this.logger.warn(
-            `The element to wait for or it's time are not defined.`,
+            `The element to wait for is not defined.`,
           );
         }
         const tabContent = await this.preRenderPage(url, waitFor);
         const preRenderedPageData: PreRenderedPageModel = {
-          content: tabContent,
+          content: tabContent[0],
           lastPreRenderingDate: new Date().getTime(),
           pageUrl: url,
         };
         const persistedPreRenderedPageData = await this.handlePagePersistance(
           preRenderedPageData,
         );
-        resolve(persistedPreRenderedPageData);
+        resolve({
+          preRenderingReport: {
+            pageUrl: url,
+            timePassedPreRendering: tabContent[1],
+            operationType: persistedPreRenderedPageData[1],
+          },
+          pageModel: persistedPreRenderedPageData[0],
+        });
       } catch (error) {
         reject(error);
       }
@@ -138,17 +147,17 @@ export class PreRenderingEngineService {
    */
   private async handlePagePersistance(
     page: PreRenderedPageModel,
-  ): Promise<PreRenderedPageModel> {
+  ): Promise<[PreRenderedPageModel, PreRenderingOperationType]> {
     const persistedPage = await this.pageIfPersisted(page.pageUrl);
     if (persistedPage) {
       this.logger.info('Found previous, updating ...');
-      return await this.pagePersistanceService.updatePage(
+      return [await this.pagePersistanceService.updatePage(
         persistedPage.id,
         page,
-      );
+      ), PreRenderingOperationType.UPDATE];
     }
     this.logger.info('No previous page found, adding new ...');
-    return await this.pagePersistanceService.writePage(page);
+    return [await this.pagePersistanceService.writePage(page), PreRenderingOperationType.CREATE];
   }
   /**
    * - returns a page if it exists with minimimal data.
@@ -171,7 +180,7 @@ export class PreRenderingEngineService {
    * @returns {Promise<string>}
    * @memberof PreRenderingEngineService
    */
-  private async preRenderPage(url, waitFor: string): Promise<string> {
+  private async preRenderPage(url, waitFor: string): Promise<[string, string]> {
     return new Promise(async (resolve, reject) => {
       const browser = await puppetter.launch({
         headless: this.launchHeadlessBrowser,
@@ -186,7 +195,8 @@ export class PreRenderingEngineService {
         if (this.optimizerEnabled) {
           this.optimizerService.disableRessources(browserTab);
         }
-        await browserTab.goto(url);
+        const response = await browserTab.goto(url);
+        console.log(typeof response.status());
         if (waitFor) {
           await browserTab.waitFor(waitFor);
         }
@@ -194,7 +204,7 @@ export class PreRenderingEngineService {
         await browserTab.close();
         await browser.close();
         this.logger.info(`Took ${process.hrtime(hrStart)} to render ${url}`);
-        resolve(tabContent);
+        resolve([tabContent, process.hrtime(hrStart).toString()]);
       } catch (err) {
         this.logger.error(err, err.trace);
         await browserTab.close();

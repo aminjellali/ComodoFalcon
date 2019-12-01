@@ -8,6 +8,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { PreRendererConfigModule } from './config/pre-renderer-config.module';
 import { ConfigService } from './config/config-service/config-service.service';
 import { LoggerModule } from './logger/logger.module';
+import { RmqModule } from './rmq-handler/rmq.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { LoggerModule } from './logger/logger.module';
       inject: [ConfigService],
     }),
     LoggerModule,
+    RmqModule,
   ],
   controllers: [AppController, PrerenderdAssetsController],
   providers: [AppService, RessourceRequestsHandlerService],

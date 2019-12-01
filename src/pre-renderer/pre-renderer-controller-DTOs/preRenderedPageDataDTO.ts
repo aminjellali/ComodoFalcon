@@ -1,9 +1,18 @@
+import { PreRenderingReport } from '../models/preRenderingReport';
+
 /**
  * - This class is a user friendly representation of the renerder page data.
  * @export
  * @interface PreRenderedPageDataDTO
  */
 export interface PreRenderedPageDataDTO {
+    /**
+     * - A date format at which the page was pre-redered.
+     *
+     * @type {string}
+     * @memberof PreRenderedPageDataDTO
+     */
+    lastPreRenderingDate: Date;
     /**
      * - This is the buisness id which is the full URL of the page we want to pre-render
      * it will be used later by the prerendering engine to get the page data thus make sure
@@ -22,11 +31,4 @@ export interface PreRenderedPageDataDTO {
      * @memberof PreRenderedPageDataDTO
      */
     content: string;
-    /**
-     * - A date format at which the page was pre-redered.
-     *
-     * @type {string}
-     * @memberof PreRenderedPageDataDTO
-     */
-    lastPreRenderingDate: Date;
 }

@@ -19,5 +19,6 @@ import { LoggerModule } from 'src/logger/logger.module';
   controllers: [
     PreRenderController],
   providers: [RessourceRequestsHandlerService, PreRenderingEngineService, PersistanceLayerService, OptimizerService],
+  exports : [PreRenderingEngineService],
 })
 export class PreRenderModule { }

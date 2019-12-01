@@ -52,7 +52,8 @@ export class PersistanceLayerService {
     id: string,
     page: PreRenderedPageModel,
   ): Promise<PreRenderedPageModel> {
-    return await this.pageModel.findByIdAndUpdate(id, page);
+     await this.pageModel.findByIdAndUpdate(id, page);
+     return await this.getPageByUrlAndProject(page.pageUrl, {content:1});
   }
   /**
    * - Fetch all pre-rendered pages.
